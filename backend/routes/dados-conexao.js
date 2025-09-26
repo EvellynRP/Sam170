@@ -139,7 +139,8 @@ router.get('/obs-config', authMiddleware, async (req, res) => {
       success: true,
       obs_config: {
         rtmp_url: `rtmp://${wowzaHost}:1935/${userLogin}`,
-        stream_key: `${userLogin}_live`,
+        stream_key: 'live',
+        stream_name: 'live',
         hls_url: `https://${wowzaHost}/${userLogin}/${userLogin}/playlist.m3u8`,
         hls_http_url: `https://${wowzaHost}/${userLogin}/${userLogin}/playlist.m3u8`,
         dash_url: `https://${wowzaHost}/${userLogin}/${userLogin}/manifest.mpd`,
@@ -148,6 +149,11 @@ router.get('/obs-config', authMiddleware, async (req, res) => {
         max_viewers: userConfig.espectadores,
         recording_enabled: userConfig.status_gravando === 'sim',
         recording_path: `/home/streaming/${userLogin}/recordings/`,
+        // Dados para FMLE
+        fmle_server: `rtmp://${wowzaHost}:1935/${userLogin}`,
+        fmle_stream: 'live',
+        fmle_username: userLogin,
+        fmle_password: 'teste2025', // Senha padrão do usuário
         // URLs para SMIL (playlists)
         smil_hls_url: `https://${wowzaHost}/${userLogin}/smil:playlists_agendamentos.smil/playlist.m3u8`,
         smil_hls_http_url: `https://${wowzaHost}/${userLogin}/smil:playlists_agendamentos.smil/playlist.m3u8`,
@@ -182,6 +188,76 @@ router.get('/obs-config', authMiddleware, async (req, res) => {
     });
   } catch (error) {
     console.error('Erro ao obter configuração OBS:', error);
+    res.status(500).json({ success: false, error: 'Erro interno do servidor' });
+  }
+});
+
+// GET /api/dados-conexao/fmle-profile - Download do profile FMLE
+router.get('/fmle-profile', authMiddleware, async (req, res) => {
+  try {
+    const userId = req.user.effective_user_id || req.user.id;
+    const userLogin = req.user.usuario || (req.user.email ? req.user.email.split('@')[0] : `user_${userId}`);
+    const userBitrate = req.user.bitrate || 2500;
+    const userPassword = 'teste2025'; // Senha padrão do usuário
+
+    // Gerar XML do profile FMLE personalizado
+    const profileXml = `<?xml version="1.0" encoding="UTF-8"?>
+<FMLEDocument version="2.0">
+  <FMLEProfile>
+    <VideoDevice>
+      <Name>Screen Capture</Name>
+      <CaptureWidth>1920</CaptureWidth>
+      <CaptureHeight>1080</CaptureHeight>
+      <CaptureFrameRate>30</CaptureFrameRate>
+    </VideoDevice>
+    
+    <AudioDevice>
+      <Name>Default Audio Device</Name>
+      <SampleRate>44100</SampleRate>
+      <Channels>2</Channels>
+    </AudioDevice>
+    
+    <VideoEncoder>
+      <Codec>H.264</Codec>
+      <Bitrate>${Math.floor(userBitrate * 0.8)}</Bitrate>
+      <Quality>High</Quality>
+      <KeyFrameInterval>2</KeyFrameInterval>
+      <Width>1920</Width>
+      <Height>1080</Height>
+      <FrameRate>30</FrameRate>
+    </VideoEncoder>
+    
+    <AudioEncoder>
+      <Codec>AAC</Codec>
+      <Bitrate>${Math.floor(userBitrate * 0.2)}</Bitrate>
+      <SampleRate>44100</SampleRate>
+      <Channels>2</Channels>
+    </AudioEncoder>
+    
+    <Output>
+      <Format>FLV</Format>
+      <URL>rtmp://stmv1.udicast.com:1935/${userLogin}</URL>
+      <Stream>live</Stream>
+      <Username>${userLogin}</Username>
+      <Password>${userPassword}</Password>
+    </Output>
+    
+    <Settings>
+      <BufferTime>3</BufferTime>
+      <ConnectTimeout>30</ConnectTimeout>
+      <ReconnectAttempts>5</ReconnectAttempts>
+      <ReconnectInterval>10</ReconnectInterval>
+    </Settings>
+  </FMLEProfile>
+</FMLEDocument>`;
+    // Configurar headers para download
+    res.setHeader('Content-Type', 'application/xml');
+    res.setHeader('Content-Disposition', `attachment; filename="profile_fmle_${userLogin}.xml"`);
+    res.setHeader('Cache-Control', 'no-cache');
+    
+    res.send(profileXml);
+  } catch (error) {
+    console.error('Erro ao gerar profile FMLE:', error);
     res.status(500).json({ success: false, error: 'Erro interno do servidor' });
   }
 });

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ChevronLeft, Copy, Server, Eye, EyeOff, Radio, CheckCircle } from 'lucide-react';
+import { ChevronLeft, Copy, Server, Eye, EyeOff, Radio, CheckCircle, Download } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { useAuth } from '../../context/AuthContext';
@@ -7,36 +7,30 @@ import { useAuth } from '../../context/AuthContext';
 const DadosConexao: React.FC = () => {
   const { user } = useAuth();
   const [showFtpPassword, setShowFtpPassword] = useState(false);
+  const [showStreamPassword, setShowStreamPassword] = useState(false);
 
   const userLogin = user?.usuario || (user?.email ? user.email.split('@')[0] : `user_${user?.id || 'usuario'}`);
+  const userPassword = 'teste2025'; // Senha padrão do usuário para streaming
 
   // Dados de conexão FTP
   const ftpData = {
     servidor: 'stmv1.udicast.com',
     usuario: userLogin,
-    senha: 'Adr1an@2024!',
+    senha: userPassword, // Usar senha do usuário
     porta: '21'
   };
 
-  // Dados de streaming Wowza / FMS
-  const fmsData = {
+  // Dados de streaming ao vivo (FMS)
+  const streamingData = {
     servidor: 'stmv1.udicast.com',
     porta: '1935',
-    aplicacao: 'samhost',
-    rtmpUrl: `rtmp://stmv1.udicast.com:1935/samhost/${userLogin}_live`,
+    aplicacao: userLogin,
+    rtmpUrl: `rtmp://stmv1.udicast.com:1935/${userLogin}`,
     usuario: userLogin,
-    streamKey: `${userLogin}_live`,
-    hlsUrl: `http://stmv1.udicast.com:80/samhost/${userLogin}_live/playlist.m3u8`,
-    hlsSecureUrl: `https://stmv1.udicast.com:443/samhost/${userLogin}_live/playlist.m3u8`,
-    dashUrl: `http://stmv1.udicast.com:80/samhost/${userLogin}_live/manifest.mpd`,
-    rtspUrl: `rtsp://stmv1.udicast.com:554/samhost/${userLogin}_live`,
-
-    // URLs SMIL (Playlists)
-    smilHlsUrl: `http://stmv1.udicast.com:1935/samhost/smil:playlists_agendamentos.smil/playlist.m3u8`,
-    smilHlsHttpUrl: `http://stmv1.udicast.com/samhost/smil:playlists_agendamentos.smil/playlist.m3u8`,
-    smilRtmpUrl: `rtmp://stmv1.udicast.com:1935/samhost/smil:playlists_agendamentos.smil`,
-    smilRtspUrl: `rtsp://stmv1.udicast.com:554/samhost/smil:playlists_agendamentos.smil`,
-    smilDashUrl: `http://stmv1.udicast.com:1935/samhost/smil:playlists_agendamentos.smil/manifest.mpd`
+    senha: userPassword, // Senha do usuário
+    stream: 'live',
+    bitrate: user?.bitrate || 2500,
+    profileFmleUrl: '/api/dados-conexao/fmle-profile' // URL para download do profile FMLE personalizado
   };
 
   const copyToClipboard = (text: string, label: string) => {
@@ -58,10 +52,129 @@ const DadosConexao: React.FC = () => {
         <h1 className="text-3xl font-bold text-gray-900">Dados de Conexão</h1>
       </div>
 
+      {/* Dados de Streaming Ao Vivo (FMS) */}
+      <div className="bg-white rounded-lg shadow-sm p-6">
+        <div className="flex items-center space-x-2 mb-6">
+          <Radio className="h-6 w-6 text-red-600" />
+          <h2 className="text-xl font-semibold text-gray-800">Dados de Streaming Ao Vivo (FMS)</h2>
+        </div>
+
+        <div className="border border-gray-300 rounded-lg overflow-hidden">
+          <table className="w-full">
+            <tbody className="bg-gray-50">
+              <tr className="border-b border-gray-200">
+                <td className="w-40 h-8 px-3 py-2 text-left font-medium text-gray-700 bg-gray-100">Servidor FMS</td>
+                <td className="px-3 py-2 text-left">
+                  <div className="flex items-center">
+                    <span className="text-gray-900 font-mono text-sm">{streamingData.rtmpUrl}</span>
+                    <button
+                      className="ml-2 text-primary-600 hover:text-primary-800"
+                      onClick={() => copyToClipboard(streamingData.rtmpUrl, 'Servidor FMS')}
+                      title="Copiar/Copy"
+                    >
+                      <Copy className="h-4 w-4" />
+                    </button>
+                  </div>
+                </td>
+              </tr>
+
+              <tr className="border-b border-gray-200">
+                <td className="w-40 h-8 px-3 py-2 text-left font-medium text-gray-700 bg-gray-100">Stream</td>
+                <td className="px-3 py-2 text-left">
+                  <div className="flex items-center">
+                    <span className="text-gray-900 font-mono text-sm">{streamingData.stream}</span>
+                    <button
+                      className="ml-2 text-primary-600 hover:text-primary-800"
+                      onClick={() => copyToClipboard(streamingData.stream, 'Stream')}
+                      title="Copiar/Copy"
+                    >
+                      <Copy className="h-4 w-4" />
+                    </button>
+                  </div>
+                </td>
+              </tr>
+
+              <tr className="border-b border-gray-200">
+                <td className="w-40 h-8 px-3 py-2 text-left font-medium text-gray-700 bg-gray-100">Bitrate</td>
+                <td className="px-3 py-2 text-left">
+                  <div className="flex items-center">
+                    <span className="text-gray-900 font-mono text-sm">{streamingData.bitrate} Kbps (video + audio)</span>
+                    <button
+                      className="ml-2 text-primary-600 hover:text-primary-800"
+                      onClick={() => copyToClipboard(streamingData.bitrate.toString(), 'Bitrate')}
+                      title="Copiar/Copy"
+                    >
+                      <Copy className="h-4 w-4" />
+                    </button>
+                  </div>
+                </td>
+              </tr>
+
+              <tr className="border-b border-gray-200">
+                <td className="w-40 h-8 px-3 py-2 text-left font-medium text-gray-700 bg-gray-100">Usuário/Login</td>
+                <td className="px-3 py-2 text-left">
+                  <div className="flex items-center">
+                    <span className="text-gray-900 font-mono text-sm">{streamingData.usuario}</span>
+                    <button
+                      className="ml-2 text-primary-600 hover:text-primary-800"
+                      onClick={() => copyToClipboard(streamingData.usuario, 'Usuário')}
+                      title="Copiar/Copy"
+                    >
+                      <Copy className="h-4 w-4" />
+                    </button>
+                  </div>
+                </td>
+              </tr>
+
+              <tr className="border-b border-gray-200">
+                <td className="w-40 h-8 px-3 py-2 text-left font-medium text-gray-700 bg-gray-100">Senha</td>
+                <td className="px-3 py-2 text-left">
+                  <div className="flex items-center">
+                    <div className="relative">
+                      <span className="text-gray-900 font-mono text-sm mr-2">{showStreamPassword ? streamingData.senha : '••••••••••••'}</span>
+                      <button
+                        onClick={() => setShowStreamPassword(!showStreamPassword)}
+                        className="text-gray-400 hover:text-gray-600 mr-2"
+                        title={showStreamPassword ? "Ocultar senha" : "Mostrar senha"}
+                      >
+                        {showStreamPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
+                    <button
+                      className="text-primary-600 hover:text-primary-800"
+                      onClick={() => copyToClipboard(streamingData.senha, 'Senha')}
+                      title="Copiar/Copy"
+                    >
+                      <Copy className="h-4 w-4" />
+                    </button>
+                  </div>
+                </td>
+              </tr>
+
+              <tr>
+                <td className="w-40 h-8 px-3 py-2 text-left font-medium text-gray-700 bg-gray-100">Profile FMLE</td>
+                <td className="px-3 py-2 text-left">
+                  <div className="flex items-center">
+                    <a
+                      href={streamingData.profileFmleUrl}
+                      download="profile_fmle.xml"
+                      className="text-blue-600 hover:text-blue-800 flex items-center"
+                    >
+                      <Download className="h-4 w-4 mr-1" />
+                      Download
+                    </a>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
       {/* Dados de Conexão FTP */}
       <div className="bg-white rounded-lg shadow-sm p-6">
         <div className="flex items-center space-x-2 mb-6">
-          <Server className="h-6 w-6 text-purple-600" />
+          <Server className="h-6 w-6 text-blue-600" />
           <h2 className="text-xl font-semibold text-gray-800">Dados de Conexão FTP</h2>
         </div>
 
@@ -143,16 +256,17 @@ const DadosConexao: React.FC = () => {
           <div>
             <h3 className="text-green-900 font-medium mb-2">💡 Como usar os dados de conexão</h3>
             <ul className="text-green-800 text-sm space-y-1">
-              <li>• <strong>Servidor Wowza:</strong> stmv1.udicast.com (domínio oficial)</li>
-              <li>• <strong>RTMP para OBS:</strong> rtmp://stmv1.udicast.com:1935/{userLogin}</li>
-              <li>• <strong>Stream Key:</strong> {userLogin}_live</li>
-              <li>• <strong>URL HLS:</strong> https://stmv1.udicast.com/{userLogin}/{userLogin}/playlist.m3u8</li>
+              <li>• <strong>Streaming Ao Vivo (FMS):</strong> Use para softwares como OBS, XSplit, FMLE</li>
+              <li>• <strong>RTMP URL:</strong> rtmp://stmv1.udicast.com:1935/{userLogin}</li>
+              <li>• <strong>Stream Name:</strong> live</li>
+              <li>• <strong>Bitrate Máximo:</strong> {user?.bitrate || 2500} kbps (video + audio)</li>
+              <li>• <strong>Profile FMLE:</strong> Baixe o arquivo de configuração para Flash Media Live Encoder</li>
               <li>• <strong>Dados FTP:</strong> Use para conectar softwares como FileZilla ou WinSCP</li>
               <li>• <strong>Upload de vídeos:</strong> Envie seus arquivos diretamente para o servidor</li>
               <li>• <strong>Organização:</strong> Crie pastas para organizar seu conteúdo</li>
               <li>• <strong>Formatos aceitos:</strong> MP4, AVI, MOV, WMV, FLV, WebM, MKV</li>
-              <li>• <strong>Tamanho máximo:</strong> Limitado pelo espaço do seu plano</li>
-              <li>• <strong>Conversão automática:</strong> Vídeos são otimizados automaticamente</li>
+              <li>• <strong>Senha:</strong> A mesma senha é usada para FTP e streaming</li>
+              <li>• <strong>Segurança:</strong> Mantenha suas credenciais em segurança</li>
             </ul>
           </div>
         </div>
